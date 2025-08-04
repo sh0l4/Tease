@@ -1,0 +1,49 @@
+name: CI/CD Pipeline
+
+on: 
+  push:
+    branches: [main, develop]
+  pull_request:
+
+env:
+  JAVA_VERSION: 17
+  MAVEN_VERSION: 3.9.5
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+  NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: 'maven'
+
+    - name: Set up Maven
+      uses: actions/cache@v3
+      with:
+        path: ~/.m2
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+
+    - name: Build with Maven
+      run: mvn clean install -DskipTests
+
+    - name: Package Application
+      run: mvn package -DskipTests
+
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          target/*.jar
+          target/*.war
+        retention-days: 10
